@@ -1,0 +1,55 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: fastapi_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Shivam012!$
+      POSTGRES_DB: fastapi-tutorial
+      # Optimize PostgreSQL for development
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Mount initialization script
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    # Optimized command with development settings
+    command: [
+      "postgres",
+      "-c", "listen_addresses=*",
+      "-c", "shared_buffers=64MB",
+      "-c", "effective_cache_size=256MB",
+      "-c", "work_mem=2MB",
+      "-c", "maintenance_work_mem=32MB",
+      "-c", "max_connections=20",
+      "-c", "wal_buffers=4MB",
+      "-c", "checkpoint_completion_target=0.9",
+      "-c", "random_page_cost=1.1",
+      "-c", "effective_io_concurrency=200",
+      "-c", "log_min_messages=warning",
+      "-c", "log_min_duration_statement=1000",
+      "-c", "autovacuum_max_workers=2"
+    ]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -h localhost"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  web:
+    build: .
+    container_name: fastapi_app
+    restart: always
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
